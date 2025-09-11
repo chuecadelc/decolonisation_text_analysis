@@ -56,16 +56,11 @@ cleaning_data <- function(data, course_id_name) {
       imperialism_mention = ifelse(str_detect(ref_test, "\\bimperi\\w*"), 1, 0),
       colonialism_mention = ifelse(str_detect(ref_test, "\\bcolon\\w*"), 1, 0),
       racism_mention = ifelse(str_detect(ref_test, "\\b(raci|race)\\w*"), 1, 0),
-      countries_mention = map_chr(
-        str_extract_all(countries, paste(list_countries, collapse = "|")),
-        ~ ifelse(length(.) > 0, str_c(., collapse = ";"), "No country")
-      ),
-      countries_mention = str_split(countries_mention, ";") ,
       course_id = course_id_name
     ) %>% 
     filter(lec_num!=20) %>% 
     na.omit() %>% 
-    select(-c(ref_test,countries))
+    select(-c(ref_test))
   
   
   return(data_cleaned)
