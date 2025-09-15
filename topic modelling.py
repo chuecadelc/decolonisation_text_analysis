@@ -217,17 +217,17 @@ def get_top_n_words_per_cluster(df, cluster_col, text_col, n):
 cluster_labels = get_top_n_words_per_cluster(combined_df,'cluster_focus_lec','focus_lec_cleaned',2) 
 
 # Map those labels back to the DataFrame
-combined_df['cluster_label'] = combined_df['cluster_focus_lec'].map(lambda x: f"Cluster {x}: {cluster_labels[x]}")
+combined_df['cluster_label_lec_focus'] = combined_df['cluster_focus_lec'].map(lambda x: f"Cluster {x}: {cluster_labels[x]}")
 
 # Themes by course_id
-topics_per_course = combined_df.groupby("course_id")["cluster_label"].value_counts().unstack().fillna(0).astype(int)
+topics_per_course = combined_df.groupby("course_id")["cluster_label_lec_focus"].value_counts().unstack().fillna(0).astype(int)
 
 # Histogram of cluster frequencies
-cluster_counts = combined_df["cluster_label"].value_counts().reset_index()
-cluster_counts.columns = ['cluster_label', 'count']
+cluster_counts = combined_df["cluster_label_lec_focus"].value_counts().reset_index()
+cluster_counts.columns = ['cluster_label_lec_focus', 'count']
 
 # Add line break after 'Cluster n:' for better readability
-cluster_counts['cluster_label'] = cluster_counts['cluster_label'].apply(
+cluster_counts['cluster_label_lec_focus'] = cluster_counts['cluster_label_lec_focus'].apply(
     lambda label: label.replace(':', ':\n') if ':' in label else label
 )
 
@@ -237,7 +237,7 @@ cluster_counts = cluster_counts.sort_values(by='count', ascending=False)
 fig, ax = plt.subplots(figsize=(10, 6))
 sns.barplot(
     data=cluster_counts,
-    y= 'cluster_label', 
+    y= 'cluster_label_lec_focus', 
     x='count',
     palette='BuPu_r', # light to dark
     ax=ax
@@ -314,13 +314,13 @@ for topic in nmf_topic_words:
 lda_labels = display_topics(lda_model, count_vectorizer.get_feature_names_out(), 10)
 nmf_labels = display_topics(nmf_model, tfidf_vectorizer.get_feature_names_out(), 10)
 
-# Assign Dominant Topic to Each Row
-df['LDA_topic'] = np.argmax(lda_topics, axis=1)
-df['NMF_topic'] = np.argmax(nmf_topics, axis=1)
+# Assign Dominant Topic to Each Row 
+df['LDA_topic_lec_focus'] = np.argmax(lda_topics, axis=1)
+df['NMF_topic_lec_focus'] = np.argmax(nmf_topics, axis=1)
 
 # Map Numeric Topics to Readable Labels - so can be meaningfully ploted in R
-df['LDA_topic_label'] = df['LDA_topic'].map(lda_labels)
-df['NMF_topic_label'] = df['NMF_topic'].map(nmf_labels)
+df['LDA_topic_label_lec_focus'] = df['LDA_topic_lec_focus'].map(lda_labels)
+df['NMF_topic_label_lec_focus'] = df['NMF_topic_lec_focus'].map(nmf_labels)
 
 # Export CSV 
 df.to_csv("combi_courses_topic_modelling_results.csv", index=False)
@@ -332,7 +332,7 @@ df.to_csv("combi_courses_topic_modelling_results.csv", index=False)
 # Recommend to use the topic-modelling_visualisations.R file for more meaninful viz and interpretation
 
 # Plot top 10 LDA topics by frequency
-top_lda_topics = df['LDA_topic_label'].value_counts().nlargest(10)
+top_lda_topics = df['LDA_topic_label_lec_focus'].value_counts().nlargest(10)
 plt.figure(figsize=(12, 6))
 sns.barplot(x=top_lda_topics.values, y=top_lda_topics.index, palette="BuPu_r")
 plt.title("Top 10 LDA Topics by Frequency")
@@ -342,7 +342,7 @@ plt.tight_layout()
 plt.show()
 
 # Plot top 10 NMF topics by frequency
-top_nmf_topics = df['NMF_topic_label'].value_counts().nlargest(10)
+top_nmf_topics = df['NMF_topic_label_lec_focus'].value_counts().nlargest(10)
 plt.figure(figsize=(12, 6))
 sns.barplot(x=top_nmf_topics.values, y=top_nmf_topics.index, palette="BuPu_r")
 plt.title("Top 10 NMF Topics by Frequency")
@@ -356,7 +356,7 @@ plt.show()
 plt.figure(figsize=(14, 6))
 sns.countplot(
     data=df, 
-    y="LDA_topic_label", 
+    y="LDA_topic_label_lec_focus", 
     hue="course_id", 
     palette = "BuPu_r",
     order=top_lda_topics.index)
@@ -370,7 +370,7 @@ plt.show()
 
 ## desc() order per course_id
 topic_order = (
-    df.groupby("LDA_topic_label") 
+    df.groupby("LDA_topic_label_lec_focus") 
     .size()
     .sort_values(ascending=False)
     .index
@@ -379,7 +379,7 @@ topic_order = (
 plt.figure(figsize=(14, 6))
 sns.countplot(
     data=df,
-    y="LDA_topic_label",  
+    y="LDA_topic_label_lec_focus",  
     hue="course_id",
     order=topic_order,
     palette="BuPu_r"
