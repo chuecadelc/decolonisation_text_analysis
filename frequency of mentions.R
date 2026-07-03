@@ -1,16 +1,20 @@
 
-# Required libraries
-
-require(tidyverse)
-require(purrr)
-require(tidytext)
-require(viridis)
-require(tidyr)
+# ============================================================
+# 1. DEPENDENCIES
+# ============================================================
+library(tidyverse)
+library(purrr)
+library(tidytext)
+library(viridis)
+library(tidyr)
 library(udpipe)
 library(ggrepel)
 
-# importing the data
+# ============================================================
+# 2. DATA IMPORT
+# ============================================================
 setwd("your dir")
+# skip = 3 removes the three header rows in the source 
 
 SOCI01 <- read.csv("~/module1.csv", skip = 3)
 SOCI02 <- read.csv("~/module2.csv", skip = 3)
@@ -25,7 +29,10 @@ SOCI10 <- read.csv("~/module10.csv", skip = 3)
 SOCI11 <- read.csv("~/module11.csv", skip = 3)
 
 
- ## cleaning up the dataset before processing it for text analysis (see other script)
+# ============================================================
+# 3. DATA CLEANING FUNCTION
+# ============================================================
+
 cleaning_data <- function(data, course_id_name) {
   
  
@@ -42,23 +49,26 @@ cleaning_data <- function(data, course_id_name) {
     ) %>%
     # need to separate entries of ref_test into multiple binary cols
     mutate(
+      # replace empty strings and NAs with "No" before encoding
       across(where(is.character),  ~ ifelse(. == "" | is.na(.), "No", .)),
       focus_lec = str_to_lower(focus_lec),
       concepts = str_to_lower(concepts),
       concepts = str_split(concepts, ";"),
       theories = str_to_lower(theories),
       theories = str_split(theories, ";"),
+      # remove all special characters from character columns
       across(
         where(is.character),
         ~ str_replace_all(., "[^[:alnum:]\\s]", "")
       ),
+      # binary encoding 
       global_focus = ifelse(str_detect(global_focus, "Yes"), 1, 0),
       imperialism_mention = ifelse(str_detect(ref_test, "\\bimperi\\w*"), 1, 0),
       colonialism_mention = ifelse(str_detect(ref_test, "\\bcolon\\w*"), 1, 0),
       racism_mention = ifelse(str_detect(ref_test, "\\b(raci|race)\\w*"), 1, 0),
       course_id = course_id_name
     ) %>% 
-    filter(lec_num!=20) %>% 
+    filter(lec_num!=20) %>% # lecture 20 is a summary session, not content
     na.omit() %>% 
     select(-c(ref_test))
   
@@ -66,6 +76,10 @@ cleaning_data <- function(data, course_id_name) {
   return(data_cleaned)
   
 } 
+
+# ============================================================
+# 4. APPLY CLEANING AND MERGE
+# ============================================================
 
 SOCI01_cleaned <- cleaning_data(SOCI01, "SOCI01")
 SOCI02_cleaned <- cleaning_data(SOCI02, "SOCI02")
@@ -86,10 +100,12 @@ combi_courses <- rbind(SOCI01_cleaned,SOCI02_cleaned,SOCI03_cleaned,SOCI04_clean
                        SOCI09_cleaned,SOCI10_cleaned,SOCI11_cleaned)
 
 
+# ============================================================
+# 5. FREQUENCY COUNTING FUNCTION
+# ============================================================
 
 ## Prop of mentions for the binary variables (global focus of the lecture, racism, colonialism and imperialism)
 data_counts <- function(data) {
-  
   
   ## cleaning up the dataset
   data_cleaned <- data %>%
@@ -109,9 +125,13 @@ data_counts <- function(data) {
 
 combi_courses_counts <- data_counts(combi_courses)
 
+# ============================================================
+# 6. VISUALISATIONS
+# ============================================================
 ## Create the barplots of frequency of mentions of colinialism, racism, imperialism and global focus
 
-p <- combi_courses_counts %>% 
+# -- Global Focus --
+p_global <- combi_courses_counts %>% 
   mutate(course_id = fct_reorder(course_id, prop_global_focus)) %>%
   ggplot(aes(x=course_id, y=prop_global_focus, fill=prop_global_focus)) + 
   scale_fill_distiller(palette = "BuPu", direction = 1)+
@@ -119,14 +139,15 @@ p <- combi_courses_counts %>%
   scale_y_continuous(breaks = round(seq(min(0), max(80), by = 10),10))+
   coord_flip() +
   xlab("") +
-  ylab("")+
+  ylab("Proportion (%)")+
   labs(fill= "Proportion", title = "Proportion of lectures that had a global focus")+
   theme_bw()
-p
-ggsave(filename = "Global focus barplot.jpeg", plot = p, width = 12, height = 8) 
 
+p_global
+ggsave(filename = "Global focus barplot.jpeg", plot = p_global, width = 12, height = 8) 
 
-p <- combi_courses_counts %>% 
+# -- Imperialism Mentions --
+p_imperialism <- combi_courses_counts %>% 
   mutate(course_id = fct_reorder(course_id, prop_imperialism_mention)) %>%
   ggplot(aes(x=course_id, y=prop_imperialism_mention, fill=prop_imperialism_mention)) + 
   scale_fill_distiller(palette = "BuPu", direction = 1)+
@@ -134,14 +155,15 @@ p <- combi_courses_counts %>%
   scale_y_continuous(breaks = round(seq(min(0), max(30), by = 5),5))+
   coord_flip() +
   xlab("") +
-  ylab("")+
+  ylab("Proportion (%)")+
   labs(fill= "Proportion", title = "Proportion of lectures that mentioned imperialism")+
   theme_bw()
 
-p
-ggsave(filename = "Imperialism mention barplot.jpeg", plot = p, width = 12, height = 8) 
+p_imperialism
+ggsave(filename = "Imperialism mention barplot.jpeg", plot = p_imperialism, width = 12, height = 8) 
 
-p <- combi_courses_counts %>% 
+# -- Racism Mentions --
+p_racism <- combi_courses_counts %>% 
   mutate(course_id = fct_reorder(course_id, prop_racism_mention)) %>% #desc(
   ggplot(aes(x=course_id, y=prop_racism_mention, fill=prop_racism_mention)) + 
   scale_fill_distiller(palette = "BuPu", direction = 1)+
@@ -149,10 +171,10 @@ p <- combi_courses_counts %>%
   scale_y_continuous(breaks = round(seq(min(0), max(60), by = 10),10))+
   coord_flip() +
   xlab("") +
-  ylab("")+
+  ylab("Proportion (%)")+
   labs(fill= "Proportion", title = "Proportion of lectures that mentioned racism")+
   theme_bw()
 
-p
-ggsave(filename = "Racism mention barplot.jpeg", plot = p, width = 12, height = 8) 
+p_racism
+ggsave(filename = "Racism mention barplot.jpeg", plot = p_racism, width = 12, height = 8) 
 
